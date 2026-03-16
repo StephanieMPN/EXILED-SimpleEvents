@@ -31,6 +31,8 @@ namespace SimpleEvents.Bridge
         private static readonly Dictionary<Type, PropertyInfo[]> PropertyCache =
             new Dictionary<Type, PropertyInfo[]>();
 
+        private static readonly object CacheLock = new object();
+
         static EventArgsMapper()
         {
             RegisterKnownTypes();
@@ -114,8 +116,8 @@ namespace SimpleEvents.Bridge
                 {
                     EventName = "round.end",
                     IsAllowed = true,
-                    LeadingTeam = (int)e.LeadingTeam,
-                    WinningTeam = e.LeadingTeam.ToString(),
+                    LeadingTeam = e.LeadingTeam,
+                    TimeToRestart = e.TimeToRestart,
                 };
             };
 
@@ -135,20 +137,32 @@ namespace SimpleEvents.Bridge
 
         private static DynamicEventArgs BuildDynamic(object exiledArgs, Type type)
         {
-            if (!PropertyCache.TryGetValue(type, out PropertyInfo[] props))
+            PropertyInfo[] props;
+
+            // Lock around cache access to prevent race conditions when multiple
+            // game events fire concurrently for an unknown EventArgs type.
+            lock (CacheLock)
             {
-                props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                PropertyCache[type] = props;
+                if (!PropertyCache.TryGetValue(type, out props))
+                {
+                    props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+                    PropertyCache[type] = props;
+                }
             }
 
             var args = new DynamicEventArgs
             {
                 EventName = "dynamic." + type.Name.Replace("EventArgs", string.Empty).ToLowerInvariant(),
                 IsAllowed = true,
+                OriginalArgs = exiledArgs,
             };
 
             foreach (PropertyInfo prop in props)
             {
+                // Always check CanRead first — before any GetValue call.
+                if (!prop.CanRead)
+                    continue;
+
                 try
                 {
                     if (prop.Name == "IsAllowed" && prop.PropertyType == typeof(bool))
@@ -157,12 +171,11 @@ namespace SimpleEvents.Bridge
                         continue;
                     }
 
-                    if (prop.CanRead)
-                        args[prop.Name] = prop.GetValue(exiledArgs);
+                    args[prop.Name] = prop.GetValue(exiledArgs);
                 }
                 catch
                 {
-                    // Ignore unreadable properties.
+                    // Ignore properties that throw on access (indexers, etc.).
                 }
             }
 

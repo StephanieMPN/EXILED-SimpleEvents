@@ -17,19 +17,24 @@ namespace SimpleEvents.Hooking
     /// </summary>
     internal static class EventHooks
     {
+        private static readonly object SubscribeLock = new object();
         private static bool subscribed;
 
         /// <summary>
         /// Subscribe to all tracked EXILED events.
-        /// Safe to call multiple times — subsequent calls are no-ops.
+        /// Thread-safe. Subsequent calls while already subscribed are no-ops.
         /// </summary>
         internal static void Subscribe()
         {
-            if (subscribed)
-                return;
+            lock (SubscribeLock)
+            {
+                if (subscribed)
+                    return;
 
-            subscribed = true;
+                subscribed = true;
+            }
 
+            Exiled.Events.Handlers.Server.WaitingForPlayers += OnWaitingForPlayers;
             Exiled.Events.Handlers.Server.RoundStarted += OnRoundStarted;
             Exiled.Events.Handlers.Server.RoundEnded += OnRoundEnded;
 
@@ -41,14 +46,19 @@ namespace SimpleEvents.Hooking
 
         /// <summary>
         /// Unsubscribe from all tracked EXILED events.
+        /// Thread-safe.
         /// </summary>
         internal static void Unsubscribe()
         {
-            if (!subscribed)
-                return;
+            lock (SubscribeLock)
+            {
+                if (!subscribed)
+                    return;
 
-            subscribed = false;
+                subscribed = false;
+            }
 
+            Exiled.Events.Handlers.Server.WaitingForPlayers -= OnWaitingForPlayers;
             Exiled.Events.Handlers.Server.RoundStarted -= OnRoundStarted;
             Exiled.Events.Handlers.Server.RoundEnded -= OnRoundEnded;
 
@@ -57,6 +67,9 @@ namespace SimpleEvents.Hooking
             Exiled.Events.Handlers.Player.Spawning -= OnSpawning;
             Exiled.Events.Handlers.Player.PickingUpItem -= OnPickingUpItem;
         }
+
+        private static void OnWaitingForPlayers() =>
+            ExiledEventBridge.DispatchWaitingForPlayers();
 
         private static void OnRoundStarted() =>
             ExiledEventBridge.DispatchRoundStarted();

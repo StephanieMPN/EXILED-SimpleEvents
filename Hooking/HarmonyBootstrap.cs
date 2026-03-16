@@ -38,7 +38,9 @@ namespace SimpleEvents.Hooking
             // 1 — Reset the bus so previous subscriptions don't leak on hot-reload.
             SimpleEventBus.Clear();
 
-            // 2 — Create Harmony instance (id must be unique per plugin).
+            // 2 — Unpatch any existing instance before creating a new one.
+            //     Without this, hot-reload leaves orphaned patches active.
+            harmonyInstance?.UnpatchSelf();
             harmonyInstance = new Harmony("com.simpleevents.framework");
 
             // 3 — Wire up EXILED event subscriptions.

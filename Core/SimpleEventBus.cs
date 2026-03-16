@@ -11,6 +11,8 @@ namespace SimpleEvents.Core
 
     using Exiled.API.Features;
 
+    using SimpleEvents;
+
     /// <summary>
     /// Central event bus for the SimpleEvents framework.
     /// Supports subscription by concrete type and by event name string.
@@ -47,6 +49,13 @@ namespace SimpleEvents.Core
 
             lock (SyncRoot)
             {
+                // Idempotent — same delegate instance cannot be subscribed twice.
+                // This mirrors standard C# event behaviour and prevents the
+                // WrapperCache from being overwritten while the old wrapper
+                // remains dangling in the handlers list.
+                if (WrapperCache.ContainsKey(handler))
+                    return;
+
                 WrapperCache[handler] = wrapper;
 
                 Type type = typeof(T);
@@ -215,6 +224,13 @@ namespace SimpleEvents.Core
 
         private static void InvokeSafely(Action<SimpleEventArgs> handler, SimpleEventArgs args)
         {
+            if (SimpleEventsPlugin.Instance?.Config?.Debug == true)
+            {
+                Log.Debug(
+                    $"[SimpleEvents] Dispatching \"{args.EventName ?? args.GetType().Name}\" " +
+                    $"→ {handler.Method.DeclaringType?.Name}.{handler.Method.Name}");
+            }
+
             try
             {
                 handler(args);

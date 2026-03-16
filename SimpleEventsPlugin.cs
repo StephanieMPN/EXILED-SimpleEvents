@@ -6,9 +6,10 @@
 
 namespace SimpleEvents
 {
+    using System;
+
     using Exiled.API.Enums;
     using Exiled.API.Features;
-    using Exiled.API.Interfaces;
 
     using SimpleEvents.Hooking;
 

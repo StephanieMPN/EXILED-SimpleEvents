@@ -19,21 +19,23 @@ namespace SimpleEvents.Bridge
     /// </summary>
     public static class ExiledEventBridge
     {
+        /// <summary>Dispatches a waiting-for-players notification.</summary>
+        public static void DispatchWaitingForPlayers()
+        {
+            SimpleEventBus.Emit(new DynamicEventArgs { EventName = "server.waiting" });
+        }
+
         /// <summary>Dispatches a round-started notification (no args, no cancellation).</summary>
         public static void DispatchRoundStarted()
         {
-            var args = new RoundStartedEventArgs
-            {
-                EventName = "round.start",
-            };
-
-            SimpleEventBus.Emit(args);
+            SimpleEventBus.Emit(new RoundStartedEventArgs { EventName = "round.start" });
         }
 
         /// <summary>Dispatches a round-ended event.</summary>
         public static void DispatchRoundEnded(RoundEndedEventArgs exiledEv)
         {
             SimpleEventArgs mapped = EventArgsMapper.Map(exiledEv);
+            mapped.OriginalArgs = exiledEv;
             SimpleEventBus.Emit(mapped);
             // RoundEndedEventArgs has no IsAllowed — nothing to write back.
         }
@@ -42,6 +44,7 @@ namespace SimpleEvents.Bridge
         public static void DispatchHurting(HurtingEventArgs exiledEv)
         {
             SimpleEventArgs mapped = EventArgsMapper.Map(exiledEv);
+            mapped.OriginalArgs = exiledEv;
             SimpleEventBus.Emit(mapped);
             exiledEv.IsAllowed = mapped.IsAllowed;
         }
@@ -50,6 +53,7 @@ namespace SimpleEvents.Bridge
         public static void DispatchDying(DyingEventArgs exiledEv)
         {
             SimpleEventArgs mapped = EventArgsMapper.Map(exiledEv);
+            mapped.OriginalArgs = exiledEv;
             SimpleEventBus.Emit(mapped);
             exiledEv.IsAllowed = mapped.IsAllowed;
         }
@@ -58,9 +62,10 @@ namespace SimpleEvents.Bridge
         public static void DispatchSpawning(SpawningEventArgs exiledEv)
         {
             SimpleEventArgs mapped = EventArgsMapper.Map(exiledEv);
+            mapped.OriginalArgs = exiledEv;
             SimpleEventBus.Emit(mapped);
 
-            // Write back mutable properties that the bus handlers may have changed.
+            // Write back mutable properties that bus handlers may have changed.
             if (mapped is PlayerSpawningEventArgs simple)
             {
                 exiledEv.Position = simple.Position;
@@ -72,6 +77,7 @@ namespace SimpleEvents.Bridge
         public static void DispatchPickingUpItem(PickingUpItemEventArgs exiledEv)
         {
             SimpleEventArgs mapped = EventArgsMapper.Map(exiledEv);
+            mapped.OriginalArgs = exiledEv;
             SimpleEventBus.Emit(mapped);
             exiledEv.IsAllowed = mapped.IsAllowed;
         }
