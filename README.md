@@ -4,6 +4,8 @@
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![EXILED](https://img.shields.io/badge/EXILED-8.0%2B-brightgreen?style=flat-square)](https://github.com/Exiled-Team/EXILED)
 
+**[Читать на русском](README.ru.md)**
+
 SimpleEvents is an event framework built on top of [EXILED](https://github.com/Exiled-Team/EXILED) for SCP: Secret Laboratory plugin development. It extends the standard EXILED event system with typed subscriptions, name-based subscriptions, and dynamic event support — without changing anything about how EXILED itself works.
 
 ---
